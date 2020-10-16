@@ -3,6 +3,7 @@ use std::mem::transmute;
 
 /// A kinda bad implementation of Java's AtomicMarkableReference,
 /// don't @ me if it breaks your program (use at your own risk).
+#[derive(Debug)]
 pub struct AtomicMarkablePtr<T>{
     ptr: AtomicPtr<T>,
 }
@@ -12,7 +13,7 @@ impl<T> AtomicMarkablePtr<T>{
     /// Create a new AtomicMarkableReference with the initial marking set to mark.
     pub fn new(mut p: *mut T, mark: bool) -> Self{
         let mut pu: usize = unsafe {transmute(p)};
-        pu = if mark {pu | 0x0001} else {pu & 0xFFFE};
+        pu = if mark {pu | 0x0001} else {pu & !(0x0001)};
         p = unsafe {transmute(pu)};
 
         Self{
@@ -42,7 +43,7 @@ impl<T> AtomicMarkablePtr<T>{
         let mark = if (pu & 0x0001) == 1 {true} else {false};
 
         // Reverse the mark
-        pu = pu & 0xFFFE;
+        pu = pu & !(0x0001);
 
         p = unsafe {transmute(pu)};
         (p, mark)
@@ -65,7 +66,7 @@ impl<T> AtomicMarkablePtr<T>{
         let mark = if (pu & 0x0001) == 1 {true} else {false};
 
         // Reverse the mark
-        pu = pu & 0xFFFE;
+        pu = pu & !(0x0001);
 
         p = unsafe {transmute(pu)};
         (p, mark)
@@ -92,7 +93,7 @@ impl<T> AtomicMarkablePtr<T>{
     /// the underlying mark, this seperates the mark from the pointer.
     pub fn store(&self, mut p: *mut T, mark: bool, order: Ordering){
         let mut pu: usize = unsafe {transmute(p)};
-        pu = if mark {pu | 0x0001} else {pu & 0xFFFE};
+        pu = if mark {pu | 0x0001} else {pu & !(0x0001)};
         p = unsafe {transmute(pu)};
 
         self.ptr.store(p, order);
@@ -106,7 +107,7 @@ impl<T> AtomicMarkablePtr<T>{
     /// Swap the current marked ptr with the given unmarked pointer marked by mark.
     pub fn swap(&self, mut p: *mut T, mark: bool, order: Ordering) -> (*mut T, bool){
         let mut pu: usize = unsafe {transmute(p)};
-        pu = if mark {pu | 0x0001} else {pu & 0xFFFE};
+        pu = if mark {pu | 0x0001} else {pu & !(0x0001)};
         p = unsafe {transmute(pu)};
 
         p = self.ptr.swap(p, order);
@@ -116,7 +117,7 @@ impl<T> AtomicMarkablePtr<T>{
         let mark = if (pu & 0x0001) == 1 {true} else {false};
 
         // Reverse the mark
-        pu = pu & 0xFFFE;
+        pu = pu & !(0x0001);
 
         p = unsafe {transmute(pu)};
         (p, mark)
@@ -125,7 +126,7 @@ impl<T> AtomicMarkablePtr<T>{
     /// Swap the current marked ptr with the given unmarked pointer marked by mark.  Returns the raw previous pointer.
     pub fn swap_get_raw(&self, mut p: *mut T, mark: bool, order: Ordering) -> *mut T{
         let mut pu: usize = unsafe {transmute(p)};
-        pu = if mark {pu | 0x0001} else {pu & 0xFFFE};
+        pu = if mark {pu | 0x0001} else {pu & !(0x0001)};
         p = unsafe {transmute(pu)};
 
         self.ptr.swap(p, order)
@@ -141,7 +142,7 @@ impl<T> AtomicMarkablePtr<T>{
         let mark = if (pu & 0x0001) == 1 {true} else {false};
 
         // Reverse the mark
-        pu = pu & 0xFFFE;
+        pu = pu & !(0x0001);
 
         p = unsafe {transmute(pu)};
         (p, mark)
@@ -155,11 +156,11 @@ impl<T> AtomicMarkablePtr<T>{
     /// Compare and swap the current marked ptr with the given unmarked pointer marked by mark.
     pub fn compare_and_swap(&self, mut curr_p: *mut T, curr_mark: bool, mut new_p: *mut T, new_mark: bool, order: Ordering) -> (*mut T, bool){
         let mut new_pu: usize = unsafe {transmute(new_p)};
-        new_pu = if new_mark {new_pu | 0x0001} else {new_pu & 0xFFFE};
+        new_pu = if new_mark {new_pu | 0x0001} else {new_pu & !(0x0001)};
         new_p = unsafe {transmute(new_pu)};
 
         let mut curr_pu: usize = unsafe {transmute(curr_p)};
-        curr_pu = if curr_mark {curr_pu | 0x0001} else {curr_pu & 0xFFFE};
+        curr_pu = if curr_mark {curr_pu | 0x0001} else {curr_pu & !(0x0001)};
         curr_p = unsafe {transmute(curr_pu)};
 
         new_p = self.ptr.compare_and_swap(curr_p, new_p, order);
@@ -169,7 +170,7 @@ impl<T> AtomicMarkablePtr<T>{
         let mark = if (new_pu & 0x0001) == 1 {true} else {false};
 
         // Reverse the mark
-        new_pu = new_pu & 0xFFFE;
+        new_pu = new_pu & !(0x0001);
 
         new_p = unsafe {transmute(new_pu)};
         (new_p, mark)
@@ -178,11 +179,11 @@ impl<T> AtomicMarkablePtr<T>{
     /// Compare and swap the current marked ptr with the given unmarked pointer marked by mark.  Returns the raw previous pointer.
     pub fn compare_and_swap_get_raw(&self, mut curr_p: *mut T, curr_mark: bool, mut new_p: *mut T, new_mark: bool, order: Ordering) -> *mut T{
         let mut new_pu: usize = unsafe {transmute(new_p)};
-        new_pu = if new_mark {new_pu | 0x0001} else {new_pu & 0xFFFE};
+        new_pu = if new_mark {new_pu | 0x0001} else {new_pu & !(0x0001)};
         new_p = unsafe {transmute(new_pu)};
 
         let mut curr_pu: usize = unsafe {transmute(curr_p)};
-        curr_pu = if curr_mark {curr_pu | 0x0001} else {curr_pu & 0xFFFE};
+        curr_pu = if curr_mark {curr_pu | 0x0001} else {curr_pu & !(0x0001)};
         curr_p = unsafe {transmute(curr_pu)};
 
         self.ptr.compare_and_swap(curr_p, new_p, order)
@@ -193,7 +194,7 @@ impl<T> AtomicMarkablePtr<T>{
 
 
         let mut curr_pu: usize = unsafe {transmute(curr_p)};
-        curr_pu = if curr_mark {curr_pu | 0x0001} else {curr_pu & 0xFFFE};
+        curr_pu = if curr_mark {curr_pu | 0x0001} else {curr_pu & !(0x0001)};
         curr_p = unsafe {transmute(curr_pu)};
 
         new_p = self.ptr.compare_and_swap(curr_p, new_p, order);
@@ -203,7 +204,7 @@ impl<T> AtomicMarkablePtr<T>{
         let mark = if (new_pu & 0x0001) == 1 {true} else {false};
 
         // Reverse the mark
-        new_pu = new_pu & 0xFFFE;
+        new_pu = new_pu & !(0x0001);
 
         new_p = unsafe {transmute(new_pu)};
         (new_p, mark)
@@ -212,7 +213,7 @@ impl<T> AtomicMarkablePtr<T>{
     /// Compare and swap the current marked ptr with the given raw pointer. Returns the raw pointer.
     pub fn compare_and_swap_raw_get_raw(&self, mut curr_p: *mut T, curr_mark: bool, new_p: *mut T, order: Ordering) -> *mut T{
         let mut curr_pu: usize = unsafe {transmute(curr_p)};
-        curr_pu = if curr_mark {curr_pu | 0x0001} else {curr_pu & 0xFFFE};
+        curr_pu = if curr_mark {curr_pu | 0x0001} else {curr_pu & !(0x0001)};
         curr_p = unsafe {transmute(curr_pu)};
 
         self.ptr.compare_and_swap(curr_p, new_p, order)
@@ -221,7 +222,7 @@ impl<T> AtomicMarkablePtr<T>{
     /// Compare and swap the current marked ptr with the given unmarked pointer marked by mark.
     pub fn raw_compare_and_swap(&self, curr_p: *mut T, mut new_p: *mut T, new_mark: bool, order: Ordering) -> (*mut T, bool){
         let mut new_pu: usize = unsafe {transmute(new_p)};
-        new_pu = if new_mark {new_pu | 0x0001} else {new_pu & 0xFFFE};
+        new_pu = if new_mark {new_pu | 0x0001} else {new_pu & !(0x0001)};
         new_p = unsafe {transmute(new_pu)};
 
         new_p = self.ptr.compare_and_swap(curr_p, new_p, order);
@@ -231,7 +232,7 @@ impl<T> AtomicMarkablePtr<T>{
         let mark = if (new_pu & 0x0001) == 1 {true} else {false};
 
         // Reverse the mark
-        new_pu = new_pu & 0xFFFE;
+        new_pu = new_pu & !(0x0001);
 
         new_p = unsafe {transmute(new_pu)};
         (new_p, mark)
@@ -240,7 +241,7 @@ impl<T> AtomicMarkablePtr<T>{
     /// Compare and wap the current marked ptr with the given unmarked pointer marked by mark.  Returns the raw previous pointer.
     pub fn raw_compare_and_swap_get_raw(&self, curr_p: *mut T, mut new_p: *mut T, new_mark: bool, order: Ordering) -> *mut T{
         let mut new_pu: usize = unsafe {transmute(new_p)};
-        new_pu = if new_mark {new_pu | 0x0001} else {new_pu & 0xFFFE};
+        new_pu = if new_mark {new_pu | 0x0001} else {new_pu & !(0x0001)};
         new_p = unsafe {transmute(new_pu)};
 
         self.ptr.compare_and_swap(curr_p, new_p, order)
@@ -256,7 +257,7 @@ impl<T> AtomicMarkablePtr<T>{
         let mark = if (new_pu & 0x0001) == 1 {true} else {false};
 
         // Reverse the mark
-        new_pu = new_pu & 0xFFFE;
+        new_pu = new_pu & !(0x0001);
 
         new_p = unsafe {transmute(new_pu)};
         (new_p, mark)
@@ -265,5 +266,26 @@ impl<T> AtomicMarkablePtr<T>{
     /// Compare and swap the current marked ptr with the given raw pointer. Returns the raw pointer.
     pub fn raw_compare_and_swap_raw_get_raw(&self, curr_p: *mut T, new_p: *mut T, order: Ordering) -> *mut T{
         self.ptr.compare_and_swap(curr_p, new_p, order)
+    }
+}
+#[cfg(test)]
+mod tests{
+    use super::{AtomicMarkablePtr, Ordering};
+
+    #[test]
+    fn create_ptr(){
+        assert_eq!(std::ptr::null_mut(), AtomicMarkablePtr::<usize>::new(std::ptr::null_mut(), false).load_raw(Ordering::SeqCst));
+        assert_ne!(std::ptr::null_mut(), AtomicMarkablePtr::<usize>::new(std::ptr::null_mut(), true).load_raw(Ordering::SeqCst));
+        assert_eq!(std::ptr::null_mut(), AtomicMarkablePtr::<usize>::new(std::ptr::null_mut(), false).load(Ordering::SeqCst).0);
+        assert_eq!(std::ptr::null_mut(), AtomicMarkablePtr::<usize>::new(std::ptr::null_mut(), true).load(Ordering::SeqCst).0);
+    }
+
+    #[test]
+    fn create_ptr_non_null(){
+        let ptr_1 = Box::into_raw(Box::new(5));
+        assert_eq!(ptr_1, AtomicMarkablePtr::<usize>::new(ptr_1, false).load_raw(Ordering::SeqCst));
+        //assert_ne!(ptr_1, AtomicMarkablePtr::<usize>::new(ptr_1, true).load_raw(Ordering::SeqCst));
+        //assert_eq!(ptr_1, AtomicMarkablePtr::<usize>::new(ptr_1, false).load(Ordering::SeqCst).0);
+        //assert_eq!(ptr_1, AtomicMarkablePtr::<usize>::new(ptr_1, true).load(Ordering::SeqCst).0);
     }
 }
