@@ -104,7 +104,7 @@ impl<T> AtomicMarkablePtr<T>{
     }
 
     /// Swap the current marked ptr with the given unmarked pointer marked by mark.
-    pub fn swap(&mut self, mut p: *mut T, mark: bool, order: Ordering) -> (*mut T, bool){
+    pub fn swap(&self, mut p: *mut T, mark: bool, order: Ordering) -> (*mut T, bool){
         let mut pu: usize = unsafe {transmute(p)};
         pu = if mark {pu | 0x0001} else {pu & 0xFFFE};
         p = unsafe {transmute(pu)};
@@ -123,7 +123,7 @@ impl<T> AtomicMarkablePtr<T>{
     }
 
     /// Swap the current marked ptr with the given unmarked pointer marked by mark.  Returns the raw previous pointer.
-    pub fn swap_get_raw(&mut self, mut p: *mut T, mark: bool, order: Ordering) -> *mut T{
+    pub fn swap_get_raw(&self, mut p: *mut T, mark: bool, order: Ordering) -> *mut T{
         let mut pu: usize = unsafe {transmute(p)};
         pu = if mark {pu | 0x0001} else {pu & 0xFFFE};
         p = unsafe {transmute(pu)};
@@ -132,7 +132,7 @@ impl<T> AtomicMarkablePtr<T>{
     }
 
     /// Swap the current marked ptr with the given raw pointer. Returns the unmarked raw pointer and mark.
-    pub fn swap_raw(&mut self, mut p: *mut T, order: Ordering) -> (*mut T, bool){
+    pub fn swap_raw(&self, mut p: *mut T, order: Ordering) -> (*mut T, bool){
 
         p = self.ptr.swap(p, order);
 
@@ -148,12 +148,12 @@ impl<T> AtomicMarkablePtr<T>{
     }
 
     /// Swap the current marked ptr with the given raw pointer. Returns the raw pointer.
-    pub fn swap_raw_get_raw(&mut self, p: *mut T, order: Ordering) -> *mut T{
+    pub fn swap_raw_get_raw(&self, p: *mut T, order: Ordering) -> *mut T{
         self.ptr.swap(p, order)
     }
 
     /// Compare and swap the current marked ptr with the given unmarked pointer marked by mark.
-    pub fn compare_and_swap(&mut self, mut curr_p: *mut T, curr_mark: bool, mut new_p: *mut T, new_mark: bool, order: Ordering) -> (*mut T, bool){
+    pub fn compare_and_swap(&self, mut curr_p: *mut T, curr_mark: bool, mut new_p: *mut T, new_mark: bool, order: Ordering) -> (*mut T, bool){
         let mut new_pu: usize = unsafe {transmute(new_p)};
         new_pu = if new_mark {new_pu | 0x0001} else {new_pu & 0xFFFE};
         new_p = unsafe {transmute(new_pu)};
@@ -176,7 +176,7 @@ impl<T> AtomicMarkablePtr<T>{
     }
 
     /// Compare and swap the current marked ptr with the given unmarked pointer marked by mark.  Returns the raw previous pointer.
-    pub fn compare_and_swap_get_raw(&mut self, mut curr_p: *mut T, curr_mark: bool, mut new_p: *mut T, new_mark: bool, order: Ordering) -> *mut T{
+    pub fn compare_and_swap_get_raw(&self, mut curr_p: *mut T, curr_mark: bool, mut new_p: *mut T, new_mark: bool, order: Ordering) -> *mut T{
         let mut new_pu: usize = unsafe {transmute(new_p)};
         new_pu = if new_mark {new_pu | 0x0001} else {new_pu & 0xFFFE};
         new_p = unsafe {transmute(new_pu)};
@@ -189,7 +189,7 @@ impl<T> AtomicMarkablePtr<T>{
     }
 
     /// Compare and swap the current marked ptr with the given raw pointer. Returns the unmarked raw pointer and mark.
-    pub fn compare_and_swap_raw(&mut self, mut curr_p: *mut T, curr_mark: bool, mut new_p: *mut T, order: Ordering) -> (*mut T, bool){
+    pub fn compare_and_swap_raw(&self, mut curr_p: *mut T, curr_mark: bool, mut new_p: *mut T, order: Ordering) -> (*mut T, bool){
 
 
         let mut curr_pu: usize = unsafe {transmute(curr_p)};
@@ -210,7 +210,7 @@ impl<T> AtomicMarkablePtr<T>{
     }
 
     /// Compare and swap the current marked ptr with the given raw pointer. Returns the raw pointer.
-    pub fn compare_and_swap_raw_get_raw(&mut self, mut curr_p: *mut T, curr_mark: bool, new_p: *mut T, order: Ordering) -> *mut T{
+    pub fn compare_and_swap_raw_get_raw(&self, mut curr_p: *mut T, curr_mark: bool, new_p: *mut T, order: Ordering) -> *mut T{
         let mut curr_pu: usize = unsafe {transmute(curr_p)};
         curr_pu = if curr_mark {curr_pu | 0x0001} else {curr_pu & 0xFFFE};
         curr_p = unsafe {transmute(curr_pu)};
@@ -219,7 +219,7 @@ impl<T> AtomicMarkablePtr<T>{
     }
 
     /// Compare and swap the current marked ptr with the given unmarked pointer marked by mark.
-    pub fn raw_compare_and_swap(&mut self, curr_p: *mut T, mut new_p: *mut T, new_mark: bool, order: Ordering) -> (*mut T, bool){
+    pub fn raw_compare_and_swap(&self, curr_p: *mut T, mut new_p: *mut T, new_mark: bool, order: Ordering) -> (*mut T, bool){
         let mut new_pu: usize = unsafe {transmute(new_p)};
         new_pu = if new_mark {new_pu | 0x0001} else {new_pu & 0xFFFE};
         new_p = unsafe {transmute(new_pu)};
@@ -238,7 +238,7 @@ impl<T> AtomicMarkablePtr<T>{
     }
 
     /// Compare and wap the current marked ptr with the given unmarked pointer marked by mark.  Returns the raw previous pointer.
-    pub fn raw_compare_and_swap_get_raw(&mut self, curr_p: *mut T, mut new_p: *mut T, new_mark: bool, order: Ordering) -> *mut T{
+    pub fn raw_compare_and_swap_get_raw(&self, curr_p: *mut T, mut new_p: *mut T, new_mark: bool, order: Ordering) -> *mut T{
         let mut new_pu: usize = unsafe {transmute(new_p)};
         new_pu = if new_mark {new_pu | 0x0001} else {new_pu & 0xFFFE};
         new_p = unsafe {transmute(new_pu)};
@@ -247,7 +247,7 @@ impl<T> AtomicMarkablePtr<T>{
     }
 
     /// Compare and swap the current marked ptr with the given raw pointer. Returns the unmarked raw pointer and mark.
-    pub fn raw_compare_and_swap_raw(&mut self, curr_p: *mut T, mut new_p: *mut T, order: Ordering) -> (*mut T, bool){
+    pub fn raw_compare_and_swap_raw(&self, curr_p: *mut T, mut new_p: *mut T, order: Ordering) -> (*mut T, bool){
 
         new_p = self.ptr.compare_and_swap(curr_p, new_p, order);
 
@@ -263,7 +263,7 @@ impl<T> AtomicMarkablePtr<T>{
     }
 
     /// Compare and swap the current marked ptr with the given raw pointer. Returns the raw pointer.
-    pub fn raw_compare_and_swap_raw_get_raw(&mut self, curr_p: *mut T, new_p: *mut T, order: Ordering) -> *mut T{
+    pub fn raw_compare_and_swap_raw_get_raw(&self, curr_p: *mut T, new_p: *mut T, order: Ordering) -> *mut T{
         self.ptr.compare_and_swap(curr_p, new_p, order)
     }
 }
