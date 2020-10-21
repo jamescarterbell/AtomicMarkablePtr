@@ -382,6 +382,18 @@ impl<T> AtomicMarkableArc<T>{
     }
 }
 
+impl<T> Eq for &AtomicMarkableArc<T>{}
+
+impl<T> PartialEq for &AtomicMarkableArc<T>{
+    fn eq(&self, r: &Self) -> bool{
+        self.ptr.load(Ordering::SeqCst) == r.ptr.load(Ordering::SeqCst)
+    }
+
+    fn ne(&self, other: &Self) -> bool{
+        !self.eq(other)
+    }
+}
+
 impl<T> Eq for &ReferenceCounter<T>{}
 
 impl<T> PartialEq for &ReferenceCounter<T>{
