@@ -300,8 +300,7 @@ impl<T> Drop for AtomicMarkableArc<T>{
     fn drop(&mut self) {
         let ptr = self.ptr.load(Ordering::SeqCst);
         if ptr.0 != std::ptr::null_mut(){
-            unsafe{(*ptr.0).counter.fetch_sub(1, Ordering::SeqCst);}
-            if unsafe{(*ptr.0).counter.load(Ordering::SeqCst) == 0}{
+            if unsafe{(*ptr.0).counter.fetch_sub(1, Ordering::SeqCst) == 1}{
                 drop(unsafe{Box::from_raw(self.ptr.load(Ordering::SeqCst).0)})
             }
         }
