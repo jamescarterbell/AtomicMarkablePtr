@@ -360,9 +360,14 @@ impl<T> AtomicMarkableArc<T>{
         let p = ptr.ptr.load(Ordering::SeqCst);
 
         let old = self.ptr.swap(p.0 as *mut ReferenceCounter<T>, mark, order);
-        if old.0 != p.0 && old.0 != std::ptr::null_mut(){
-            unsafe{(*old.0).counter.fetch_sub(1, Ordering::SeqCst)};
-            unsafe{(*p.0).counter.fetch_add(1, Ordering::SeqCst)};
+        if old.0 != p.0{
+            if old.0 != std::ptr::null_mut() && 1 == unsafe{(*old.0).counter.fetch_sub(1, Ordering::SeqCst)}{
+                println!("Dropping Old!");
+                drop(unsafe{Box::from_raw(old.0)});
+            }
+            if p.0 != std::ptr::null_mut(){
+                unsafe{(*p.0).counter.fetch_add(1, Ordering::SeqCst)};
+            }
         }
     }
 
@@ -377,8 +382,9 @@ impl<T> AtomicMarkableArc<T>{
             if p.0 != std::ptr::null_mut(){
                 unsafe{(*p.0).counter.fetch_add(1, Ordering::SeqCst)};
             }
-            if curr_p.0 != std::ptr::null_mut(){
-                unsafe{(*curr_p.0).counter.fetch_sub(1, Ordering::SeqCst)};
+            if curr_p.0 != std::ptr::null_mut() && 1 == unsafe{(*curr_p.0).counter.fetch_sub(1, Ordering::SeqCst)}{
+                println!("Dropping Old!");
+                drop(unsafe{Box::from_raw(curr_p.0)});
             }
         };
 
