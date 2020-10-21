@@ -313,7 +313,8 @@ impl<T> Clone for AtomicMarkableArc<T>{
     fn clone(&self) -> Self { 
         let ptr = self.ptr.load(Ordering::SeqCst);
         if ptr.0 != std::ptr::null_mut(){
-            unsafe{(*ptr.0).counter.fetch_add(1, Ordering::SeqCst)};
+           let  count = unsafe{(*ptr.0).counter.fetch_add(1, Ordering::SeqCst)};
+           println!("CLONING ARC, COUNT: {}", count);
         }
         AtomicMarkableArc{
             ptr: AtomicMarkablePtr::new(ptr.0, ptr.1),
