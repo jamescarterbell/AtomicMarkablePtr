@@ -366,7 +366,7 @@ impl<T> AtomicMarkableArc<T>{
     }
 
     /// Compare and swap the current marked ptr with the given unmarked pointer marked by mark.
-    pub fn compare_and_swap(&self, curr_ptr: AtomicMarkableArc<T>, curr_mark: bool, new_ptr: AtomicMarkableArc<T>, new_mark: bool, order: Ordering) -> Option<(&ReferenceCounter<T>, bool)>{
+    pub fn compare_and_swap(&self, curr_ptr: AtomicMarkableArc<T>, curr_mark: bool, new_ptr: AtomicMarkableArc<T>, new_mark: bool, order: Ordering) -> Option<(&mut ReferenceCounter<T>, bool)>{
         let p = new_ptr.ptr.load(Ordering::SeqCst);
         let curr_p = curr_ptr.ptr.load(Ordering::SeqCst);
 
@@ -381,7 +381,7 @@ impl<T> AtomicMarkableArc<T>{
             }
         };
 
-        match unsafe{new_p.0.as_ref()}{
+        match unsafe{new_p.0.as_mut()}{
             Some(ptr) => Some((ptr, new_p.1)),
             None => None,
         }
