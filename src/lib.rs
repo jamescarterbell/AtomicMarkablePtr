@@ -413,6 +413,31 @@ impl<T> PartialEq for &ReferenceCounter<T>{
     }
 }
 
+impl<T> Eq for &mut AtomicMarkableArc<T>{}
+
+impl<T> PartialEq for &mut AtomicMarkableArc<T>{
+    fn eq(&self, r: &Self) -> bool{
+        self.ptr.load(Ordering::SeqCst).0 == r.ptr.load(Ordering::SeqCst).0
+    }
+
+    fn ne(&self, other: &Self) -> bool{
+        !self.eq(other)
+    }
+}
+
+impl<T> Eq for &mut ReferenceCounter<T>{}
+
+impl<T> PartialEq for &mut ReferenceCounter<T>{
+
+    fn eq(&self, r: &Self) -> bool { 
+        *self as *const ReferenceCounter<T> == *r as *const ReferenceCounter<T>
+     }
+
+    fn ne(&self, other: &Self) -> bool {
+        !self.eq(other)
+    }
+}
+
 pub enum PtrErrors{
     NullPtrError,
 }
