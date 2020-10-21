@@ -338,21 +338,18 @@ impl<T> AtomicMarkableArc<T>{
 
     /// Load the markable reference and get the underlying pointer and
     /// the underlying mark, this seperates the mark from the pointer.
-    pub fn load(&self, order: Ordering) -> Option<(&mut ReferenceCounter<T>, bool)>{
+    pub fn load(&self, order: Ordering) -> (Option<&mut ReferenceCounter<T>>, bool){
         let p = self.ptr.load(order);
 
         match p.0 == std::ptr::null_mut(){
-            true => None,
-            false => Some((unsafe{p.0.as_mut().unwrap()}, p.1))
+            true => (None, p.1),
+            false => (Some(unsafe{p.0.as_mut().unwrap()}), p.1)
         }
     }
 
     /// Get the mark.
     pub fn mark(&self, order: Ordering) -> bool{
-        match self.load(order){
-            Some(p) => p.1,
-            None => false,
-        }
+        self.load(order).1
     }
 
     /// Store the markable reference and set the underlying pointer and
@@ -366,7 +363,7 @@ impl<T> AtomicMarkableArc<T>{
     }
 
     /// Compare and swap the current marked ptr with the given unmarked pointer marked by mark.
-    pub fn compare_and_swap(&self, curr_ptr: AtomicMarkableArc<T>, curr_mark: bool, new_ptr: AtomicMarkableArc<T>, new_mark: bool, order: Ordering) -> Option<(&mut ReferenceCounter<T>, bool)>{
+    pub fn compare_and_swap(&self, curr_ptr: AtomicMarkableArc<T>, curr_mark: bool, new_ptr: AtomicMarkableArc<T>, new_mark: bool, order: Ordering) -> (Option<&mut ReferenceCounter<T>>, bool){
         let p = new_ptr.ptr.load(Ordering::SeqCst);
         let curr_p = curr_ptr.ptr.load(Ordering::SeqCst);
 
@@ -382,8 +379,8 @@ impl<T> AtomicMarkableArc<T>{
         };
 
         match unsafe{new_p.0.as_mut()}{
-            Some(ptr) => Some((ptr, new_p.1)),
-            None => None,
+            Some(ptr) => (Some(ptr), new_p.1),
+            None => (None, p.1),
         }
     }
 }
@@ -457,19 +454,19 @@ mod tests{
     #[test]
     fn create_arcs(){
         let ptr = AtomicMarkableArc::<usize>::null();
-        assert_eq!(true , ptr.load(Ordering::SeqCst).is_none());
+        assert_eq!(true , ptr.load(Ordering::SeqCst).0.is_none());
 
         let new_ptr = AtomicMarkableArc::new(5, true);
         ptr.store( new_ptr.clone(), false, Ordering::SeqCst);
         let val = ptr.load(Ordering::SeqCst);
-        assert_eq!(true, val.is_some());
-        assert_eq!(true, val.unwrap().0.data == 5);
+        assert_eq!(true, val.0.is_some());
+        assert_eq!(true, val.0.unwrap().data == 5);
 
         let newer_ptr = AtomicMarkableArc::new(20, true);
         ptr.compare_and_swap(new_ptr, false, newer_ptr,true, Ordering::SeqCst);
         let val = ptr.load(Ordering::SeqCst);
-        assert_eq!(true, val.is_some());
-        assert_eq!(true, val.unwrap().0.data == 20);
+        assert_eq!(true, val.0.is_some());
+        assert_eq!(true, val.0.unwrap().data == 20);
     }
 
     #[test]
