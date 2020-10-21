@@ -481,4 +481,14 @@ mod tests{
         //assert_eq!(ptr_1, AtomicMarkablePtr::<usize>::new(ptr_1, false).load(Ordering::SeqCst).0);
         //assert_eq!(ptr_1, AtomicMarkablePtr::<usize>::new(ptr_1, true).load(Ordering::SeqCst).0);
     }
+
+    #[test]
+    fn multi_thread(){
+        let ptr = AtomicMarkableArc::new(5, false);
+        let wierd = AtomicMarkableArc::new(10, false);
+        let ptr2 = ptr.clone();
+        let thread = std::thread::spawn(move ||{wierd.store(ptr2, false, Ordering::SeqCst)});
+        drop(ptr);
+        thread.join();
+    }
 }
