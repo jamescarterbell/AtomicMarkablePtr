@@ -336,7 +336,7 @@ impl<T> AtomicMarkableArc<T>{
 
     /// Load the markable reference and get the underlying pointer and
     /// the underlying mark, this seperates the mark from the pointer.
-    pub fn load(&self, order: Ordering) -> Option<(&dyn Deref<Target = T>, bool)>{
+    pub fn load(&self, order: Ordering) -> Option<(&ReferenceCounter<T>, bool)>{
         let p = self.ptr.load(order);
 
         match p.0 == std::ptr::null_mut(){
@@ -364,7 +364,7 @@ impl<T> AtomicMarkableArc<T>{
     }
 
     /// Compare and swap the current marked ptr with the given unmarked pointer marked by mark.
-    pub fn compare_and_swap(&self, curr_ptr: AtomicMarkableArc<T>, curr_mark: bool, new_ptr: AtomicMarkableArc<T>, new_mark: bool, order: Ordering) -> Option<(&dyn Deref<Target = T>, bool)>{
+    pub fn compare_and_swap(&self, curr_ptr: AtomicMarkableArc<T>, curr_mark: bool, new_ptr: AtomicMarkableArc<T>, new_mark: bool, order: Ordering) -> Option<(&ReferenceCounter<T>, bool)>{
         let p = new_ptr.ptr.load(Ordering::SeqCst);
         let curr_p = curr_ptr.ptr.load(Ordering::SeqCst);
 
@@ -381,6 +381,8 @@ impl<T> AtomicMarkableArc<T>{
         }
     }
 }
+
+
 
 pub enum PtrErrors{
     NullPtrError,
@@ -407,13 +409,13 @@ mod tests{
         ptr.store( new_ptr.clone(), false, Ordering::SeqCst);
         let val = ptr.load(Ordering::SeqCst);
         assert_eq!(true, val.is_some());
-        assert_eq!(true, *val.unwrap().0.deref() == 5);
+        assert_eq!(true, val.unwrap().0.data == 5);
 
         let newer_ptr = AtomicMarkableArc::new(20, true);
         ptr.compare_and_swap(new_ptr, false, newer_ptr,true, Ordering::SeqCst);
         let val = ptr.load(Ordering::SeqCst);
         assert_eq!(true, val.is_some());
-        assert_eq!(true, *val.unwrap().0.deref() == 20);
+        assert_eq!(true, val.unwrap().0.data == 20);
     }
 
     #[test]
