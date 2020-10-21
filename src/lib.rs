@@ -362,9 +362,8 @@ impl<T> AtomicMarkableArc<T>{
         let old = self.ptr.swap(p.0 as *mut ReferenceCounter<T>, mark, order);
         if old.0 != p.0 && old.0 != std::ptr::null_mut(){
             unsafe{(*old.0).counter.fetch_sub(1, Ordering::SeqCst)};
+            unsafe{(*p.0).counter.fetch_add(1, Ordering::SeqCst)};
         }
-        //We need to increase the reference count before the Arc gets dropped
-        unsafe{(*p.0).counter.fetch_add(1, Ordering::SeqCst)};
     }
 
     /// Compare and swap the current marked ptr with the given unmarked pointer marked by mark.
