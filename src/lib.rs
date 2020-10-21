@@ -1,5 +1,7 @@
-use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::atomic::{AtomicPtr, Ordering, AtomicUsize};
 use std::mem::transmute;
+use std::ops::{Deref, DerefMut, Drop};
+
 
 /// A kinda bad implementation of Java's AtomicMarkableReference,
 /// don't @ me if it breaks your program (use at your own risk).
@@ -268,9 +270,125 @@ impl<T> AtomicMarkablePtr<T>{
         self.ptr.compare_and_swap(curr_p, new_p, order)
     }
 }
+
+pub struct AtomicMarkableArc<T>{
+    ptr: AtomicMarkablePtr<ReferenceCounter<T>>,
+}
+
+pub struct ReferenceCounter<T>{
+    data: T,
+    counter: AtomicUsize,
+}
+
+impl<T> Deref for ReferenceCounter<T>{
+
+    type Target = T;
+
+    fn deref(&self) -> &<Self as std::ops::Deref>::Target { 
+        &self.data
+     }
+}
+
+impl<T> DerefMut for ReferenceCounter<T>{
+
+    fn deref_mut(&mut self) -> &mut <Self as std::ops::Deref>::Target { 
+        &mut self.data
+    }
+}
+
+impl<T> Drop for AtomicMarkableArc<T>{
+    fn drop(&mut self) {
+        let ptr = self.ptr.load(Ordering::SeqCst);
+        if ptr.0 != std::ptr::null_mut(){
+            unsafe{(*ptr.0).counter.fetch_sub(1, Ordering::SeqCst);}
+            if unsafe{(*ptr.0).counter.load(Ordering::SeqCst) == 0}{
+                drop(unsafe{Box::from_raw(self.ptr.load(Ordering::SeqCst).0)})
+            }
+        }
+    }
+}
+
+impl<T> Clone for AtomicMarkableArc<T>{  
+    fn clone(&self) -> Self { 
+        let ptr = self.ptr.load(Ordering::SeqCst);
+        unsafe{(*ptr.0).counter.fetch_add(1, Ordering::SeqCst)};
+        AtomicMarkableArc{
+            ptr: AtomicMarkablePtr::new(ptr.0, ptr.1),
+        }
+    }
+}
+
+impl<T> AtomicMarkableArc<T>{
+
+    pub fn new(data: T, mark: bool) -> Self{
+        let raw = Box::into_raw(Box::new(ReferenceCounter{data, counter: AtomicUsize::new(1)}));
+        Self{
+            ptr: AtomicMarkablePtr::new(raw, mark),
+        }
+    }
+
+    pub fn null() -> Self{
+        Self{
+            ptr: AtomicMarkablePtr::new_raw(std::ptr::null_mut()),
+        }
+    }
+
+
+    /// Load the markable reference and get the underlying pointer and
+    /// the underlying mark, this seperates the mark from the pointer.
+    pub fn load(&self, order: Ordering) -> Option<(&dyn Deref<Target = T>, bool)>{
+        let p = self.ptr.load(order);
+
+        match p.0 == std::ptr::null_mut(){
+            true => None,
+            false => Some((unsafe{p.0.as_ref().unwrap()}, p.1))
+        }
+    }
+
+    /// Get the mark.
+    pub fn mark(&self, order: Ordering) -> bool{
+        match self.load(order){
+            Some(p) => p.1,
+            None => false,
+        }
+    }
+
+    /// Store the markable reference and set the underlying pointer and
+    /// the underlying mark, this seperates the mark from the pointer.
+    pub fn store(&self, ptr: AtomicMarkableArc<T>, mark: bool, order: Ordering){
+        let p = ptr.ptr.load(Ordering::SeqCst);
+
+        self.ptr.store(p.0 as *mut ReferenceCounter<T>, mark, order);
+        //We need to increase the reference count before the Arc gets dropped
+        unsafe{(*p.0).counter.fetch_add(1, Ordering::SeqCst)};
+    }
+
+    /// Compare and swap the current marked ptr with the given unmarked pointer marked by mark.
+    pub fn compare_and_swap(&self, curr_ptr: AtomicMarkableArc<T>, curr_mark: bool, new_ptr: AtomicMarkableArc<T>, new_mark: bool, order: Ordering) -> Option<(&dyn Deref<Target = T>, bool)>{
+        let p = new_ptr.ptr.load(Ordering::SeqCst);
+        let curr_p = curr_ptr.ptr.load(Ordering::SeqCst);
+
+        let new_p = self.ptr.compare_and_swap(curr_p.0, curr_mark, p.0, new_mark, order);
+
+        if (curr_p, curr_mark) == (new_p, new_mark){
+            unsafe{(*p.0).counter.fetch_add(1, Ordering::SeqCst)};
+            unsafe{(*curr_p.0).counter.fetch_sub(1, Ordering::SeqCst)};
+        };
+
+        match unsafe{new_p.0.as_ref()}{
+            Some(ptr) => Some((ptr, new_p.1)),
+            None => None,
+        }
+    }
+}
+
+pub enum PtrErrors{
+    NullPtrError,
+}
+
 #[cfg(test)]
 mod tests{
-    use super::{AtomicMarkablePtr, Ordering};
+    use super::{AtomicMarkablePtr, AtomicMarkableArc, Ordering};
 
     #[test]
     fn create_ptr(){
@@ -278,6 +396,24 @@ mod tests{
         assert_ne!(std::ptr::null_mut(), AtomicMarkablePtr::<usize>::new(std::ptr::null_mut(), true).load_raw(Ordering::SeqCst));
         assert_eq!(std::ptr::null_mut(), AtomicMarkablePtr::<usize>::new(std::ptr::null_mut(), false).load(Ordering::SeqCst).0);
         assert_eq!(std::ptr::null_mut(), AtomicMarkablePtr::<usize>::new(std::ptr::null_mut(), true).load(Ordering::SeqCst).0);
+    }
+
+    #[test]
+    fn create_arcs(){
+        let ptr = AtomicMarkableArc::<usize>::null();
+        assert_eq!(true , ptr.load(Ordering::SeqCst).is_none());
+
+        let new_ptr = AtomicMarkableArc::new(5, true);
+        ptr.store( new_ptr.clone(), false, Ordering::SeqCst);
+        let val = ptr.load(Ordering::SeqCst);
+        assert_eq!(true, val.is_some());
+        assert_eq!(true, *val.unwrap().0.deref() == 5);
+
+        let newer_ptr = AtomicMarkableArc::new(20, true);
+        ptr.compare_and_swap(new_ptr, false, newer_ptr,true, Ordering::SeqCst);
+        let val = ptr.load(Ordering::SeqCst);
+        assert_eq!(true, val.is_some());
+        assert_eq!(true, *val.unwrap().0.deref() == 20);
     }
 
     #[test]
