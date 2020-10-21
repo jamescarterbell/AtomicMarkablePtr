@@ -372,7 +372,7 @@ impl<T> AtomicMarkableArc<T>{
 
         let new_p = self.ptr.compare_and_swap(curr_p.0, curr_mark, p.0, new_mark, order);
 
-        if (curr_p, curr_mark) == (new_p, new_mark){
+        if (curr_p.0, curr_mark) == (new_p.0, new_mark){
             if p.0 != std::ptr::null_mut(){
                 unsafe{(*p.0).counter.fetch_add(1, Ordering::SeqCst)};
             }
