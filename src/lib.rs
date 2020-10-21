@@ -338,12 +338,12 @@ impl<T> AtomicMarkableArc<T>{
 
     /// Load the markable reference and get the underlying pointer and
     /// the underlying mark, this seperates the mark from the pointer.
-    pub fn load(&self, order: Ordering) -> Option<(&ReferenceCounter<T>, bool)>{
+    pub fn load(&self, order: Ordering) -> Option<(&mut ReferenceCounter<T>, bool)>{
         let p = self.ptr.load(order);
 
         match p.0 == std::ptr::null_mut(){
             true => None,
-            false => Some((unsafe{p.0.as_ref().unwrap()}, p.1))
+            false => Some((unsafe{p.0.as_mut().unwrap()}, p.1))
         }
     }
 
