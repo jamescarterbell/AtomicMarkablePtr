@@ -371,8 +371,12 @@ impl<T> AtomicMarkableArc<T>{
         let new_p = self.ptr.compare_and_swap(curr_p.0, curr_mark, p.0, new_mark, order);
 
         if (curr_p, curr_mark) == (new_p, new_mark){
-            unsafe{(*p.0).counter.fetch_add(1, Ordering::SeqCst)};
-            unsafe{(*curr_p.0).counter.fetch_sub(1, Ordering::SeqCst)};
+            if p.0 != std::ptr::null_mut(){
+                unsafe{(*p.0).counter.fetch_add(1, Ordering::SeqCst)};
+            }
+            if curr_p.0 != std::ptr::null_mut(){
+                unsafe{(*curr_p.0).counter.fetch_sub(1, Ordering::SeqCst)};
+            }
         };
 
         match unsafe{new_p.0.as_ref()}{
@@ -386,7 +390,7 @@ impl<T> Eq for &AtomicMarkableArc<T>{}
 
 impl<T> PartialEq for &AtomicMarkableArc<T>{
     fn eq(&self, r: &Self) -> bool{
-        self.ptr.load(Ordering::SeqCst) == r.ptr.load(Ordering::SeqCst)
+        self.ptr.load(Ordering::SeqCst).0 == r.ptr.load(Ordering::SeqCst).0
     }
 
     fn ne(&self, other: &Self) -> bool{
