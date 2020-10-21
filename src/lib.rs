@@ -382,7 +382,18 @@ impl<T> AtomicMarkableArc<T>{
     }
 }
 
+impl<T> Eq for &ReferenceCounter<T>{}
 
+impl<T> PartialEq for &ReferenceCounter<T>{
+
+    fn eq(&self, r: &Self) -> bool { 
+        *self as *const ReferenceCounter<T> == *r as *const ReferenceCounter<T>
+     }
+
+    fn ne(&self, other: &Self) -> bool {
+        !self.eq(other)
+    }
+}
 
 pub enum PtrErrors{
     NullPtrError,
