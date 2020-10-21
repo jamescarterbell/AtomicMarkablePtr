@@ -277,7 +277,7 @@ pub struct AtomicMarkableArc<T>{
 
 pub struct ReferenceCounter<T>{
     data: T,
-    counter: AtomicUsize,
+    pub counter: AtomicUsize,
 }
 
 impl<T> Deref for ReferenceCounter<T>{
