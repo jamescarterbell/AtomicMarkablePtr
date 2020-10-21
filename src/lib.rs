@@ -303,7 +303,7 @@ impl<T> Drop for AtomicMarkableArc<T>{
             let count = unsafe{(*ptr.0).counter.fetch_sub(1, Ordering::SeqCst)};
             if count == 1{
                 println!("Dropping an ARC with count: {}", count);
-                //drop(unsafe{Box::from_raw(self.ptr.load(Ordering::SeqCst).0)})
+                drop(unsafe{Box::from_raw(self.ptr.load(Ordering::SeqCst).0)})
             }
         }
     }
@@ -363,7 +363,7 @@ impl<T> AtomicMarkableArc<T>{
         if old.0 != p.0{
             if old.0 != std::ptr::null_mut() && 1 == unsafe{(*old.0).counter.fetch_sub(1, Ordering::SeqCst)}{
                 println!("Dropping Old!");
-                //drop(unsafe{Box::from_raw(old.0)});
+                drop(unsafe{Box::from_raw(old.0)});
             }
             if p.0 != std::ptr::null_mut(){
                 unsafe{(*p.0).counter.fetch_add(1, Ordering::SeqCst)};
@@ -384,7 +384,7 @@ impl<T> AtomicMarkableArc<T>{
             }
             if curr_p.0 != std::ptr::null_mut() && 1 == unsafe{(*curr_p.0).counter.fetch_sub(1, Ordering::SeqCst)}{
                 println!("Dropping Old!");
-                //drop(unsafe{Box::from_raw(curr_p.0)});
+                drop(unsafe{Box::from_raw(curr_p.0)});
             }
         };
 
