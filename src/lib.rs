@@ -269,6 +269,16 @@ impl<T> AtomicMarkablePtr<T>{
     pub fn raw_compare_and_swap_raw_get_raw(&self, curr_p: *mut T, new_p: *mut T, order: Ordering) -> *mut T{
         self.ptr.compare_and_swap(curr_p, new_p, order)
     }
+
+    pub fn lock(&self, order : Ordering){
+        let self_usize: &AtomicUsize = unsafe{transmute(self)};
+        while (self_usize.fetch_or(0x02, Ordering::SeqCst) & 0x02 == 0){}
+    }
+
+    pub fn unlock(&self, order : Ordering){
+        let self_usize: AtomicUsize = unsafe{transmute(self)};
+        self_usize.fetch_and(!0x02, Ordering::SeqCst);
+    }
 }
 
 pub struct AtomicMarkableArc<T>{
@@ -459,6 +469,14 @@ mod tests{
         assert_ne!(std::ptr::null_mut(), AtomicMarkablePtr::<usize>::new(std::ptr::null_mut(), true).load_raw(Ordering::SeqCst));
         assert_eq!(std::ptr::null_mut(), AtomicMarkablePtr::<usize>::new(std::ptr::null_mut(), false).load(Ordering::SeqCst).0);
         assert_eq!(std::ptr::null_mut(), AtomicMarkablePtr::<usize>::new(std::ptr::null_mut(), true).load(Ordering::SeqCst).0);
+    }
+
+    #[test]
+    fn create_ptr_lock(){
+        let test = AtomicMarkablePtr::<usize>::new(std::ptr::null_mut(), false);
+        test.lock(Ordering::SeqCst);
+
+        test.unlock(Ordering::SeqCst);
     }
 
     #[test]
